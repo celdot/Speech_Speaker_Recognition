@@ -5,6 +5,7 @@ import scipy
 import scipy.signal
 from scipy.fftpack import fft
 from scipy.fftpack.realtransforms import dct
+from scipy.spatial import distance_matrix
 
 from lab1_tools import lifter, trfbank
 
@@ -161,4 +162,4 @@ def dtw(x, y, dist):
 
     Note that you only need to define the first output for this exercise.
     """
-    pass
+    LD = distance_matrix(x, y, dist)
