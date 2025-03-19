@@ -1,4 +1,5 @@
 import numpy as np
+
 # DT2119, Lab 1 Feature Extraction
 # - Functions given by the exercise -------------------------------------------- 
 
@@ -90,10 +91,10 @@ def trfbank(fs, nfft, lowfreq=133.33, linsc=200/3., logsc=1.0711703, nlinfilt=13
         hi = freqs[i+2]
 
         lid = np.arange(np.floor(low * nfft / fs) + 1,
-                        np.floor(cen * nfft / fs) + 1, dtype=np.int)
+                        np.floor(cen * nfft / fs) + 1, dtype=np.uint8)
         lslope = heights[i] / (cen - low)
         rid = np.arange(np.floor(cen * nfft / fs) + 1,
-                        np.floor(hi * nfft / fs) + 1, dtype=np.int)
+                        np.floor(hi * nfft / fs) + 1, dtype=np.uint8)
         rslope = heights[i] / (hi - cen)
         fbank[i][lid] = lslope * (nfreqs[lid] - low)
         fbank[i][rid] = rslope * (hi - nfreqs[rid])
