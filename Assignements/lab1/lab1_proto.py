@@ -69,7 +69,6 @@ def enframe(samples, winlen, winshift):
         if i + winlen > len(samples):
             break
         frames.append(samples[i:i+winlen])
-        
     return np.array(frames)
     
 def preemp(input, p=0.97):
@@ -99,7 +98,12 @@ def windowing(input):
     Note (you can use the function hamming from scipy.signal, include the sym=0 option
     if you want to get the same results as in the example)
     """
-    window = scipy.signal.hamming(input.shape[1], sym=False)
+    # If the scipy.signal.hamming function does not exist (which should happen if 
+    # you are using a recent version of scipy), we have to use scipy.signal.windows.hamming
+    if not hasattr(scipy.signal, 'hamming'):
+        window = scipy.signal.windows.hamming(input.shape[1], sym=False)
+    else:
+        window = scipy.signal.hamming(input.shape[1], sym=False)
     return input * window
 
 def powerSpectrum(input, nfft):
@@ -163,3 +167,42 @@ def dtw(x, y, dist):
     Note that you only need to define the first output for this exercise.
     """
     LD = distance_matrix(x, y, dist)
+    AD = np.zeros(LD.shape)
+    # Initialize the first row and column of the accumulated distance matrix
+    # with the local distance matrix
+    AD[0, 0] = LD[0, 0]
+    for i in range(1, LD.shape[0]):
+        AD[i, 0] = AD[i-1, 0] + LD[i, 0]
+    for j in range(1, LD.shape[1]):
+        AD[0, j] = AD[0, j-1] + LD[0, j]
+        
+    # Fill the accumulated distance matrix and track the predecessor for each cell
+    pred = np.zeros(AD.shape)
+    
+    for i in range(1, LD.shape[0]):
+        for j in range(1, LD.shape[1]):
+            AD[i, j] = LD[i, j] + min(AD[i-1, j], AD[i, j-1], AD[i-1, j-1])
+            if AD[i-1, j] < AD[i, j-1] and AD[i-1, j] < AD[i-1, j-1]:
+                pred[i, j] = 1
+            elif AD[i, j-1] < AD[i-1, j] and AD[i, j-1] < AD[i-1, j-1]:
+                pred[i, j] = 2
+            else:
+                pred[i, j] = 3
+                
+    # Backtrack the best path
+    path = []
+    i = LD.shape[0] - 1
+    j = LD.shape[1] - 1
+    while i > 0 or j > 0:
+        path.append((i, j))
+        if pred[i, j] == 1:
+            i -= 1
+        elif pred[i, j] == 2:
+            j -= 1
+        else:
+            i -= 1
+            j -= 1
+    path.append((0, 0))
+    path.reverse()
+    
+    return AD[-1, -1] / (len(x) + len(y)), LD, AD, path
