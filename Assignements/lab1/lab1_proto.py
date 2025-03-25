@@ -166,22 +166,21 @@ def dtw(x, y, dist):
 
     Note that you only need to define the first output for this exercise.
     """
-    LD = distance_matrix(x, y, dist)
-    AD = np.zeros(LD.shape)
+    AD = np.zeros(dist.shape)
     # Initialize the first row and column of the accumulated distance matrix
     # with the local distance matrix
-    AD[0, 0] = LD[0, 0]
-    for i in range(1, LD.shape[0]):
-        AD[i, 0] = AD[i-1, 0] + LD[i, 0]
-    for j in range(1, LD.shape[1]):
-        AD[0, j] = AD[0, j-1] + LD[0, j]
+    AD[0, 0] = dist[0, 0]
+    for i in range(1, dist.shape[0]):
+        AD[i, 0] = AD[i-1, 0] + dist[i, 0]
+    for j in range(1, dist.shape[1]):
+        AD[0, j] = AD[0, j-1] + dist[0, j]
         
     # Fill the accumulated distance matrix and track the predecessor for each cell
     pred = np.zeros(AD.shape)
     
-    for i in range(1, LD.shape[0]):
-        for j in range(1, LD.shape[1]):
-            AD[i, j] = LD[i, j] + min(AD[i-1, j], AD[i, j-1], AD[i-1, j-1])
+    for i in range(1, dist.shape[0]):
+        for j in range(1, dist.shape[1]):
+            AD[i, j] = dist[i, j] + min(AD[i-1, j], AD[i, j-1], AD[i-1, j-1])
             if AD[i-1, j] < AD[i, j-1] and AD[i-1, j] < AD[i-1, j-1]:
                 pred[i, j] = 1
             elif AD[i, j-1] < AD[i-1, j] and AD[i, j-1] < AD[i-1, j-1]:
@@ -191,8 +190,8 @@ def dtw(x, y, dist):
                 
     # Backtrack the best path
     path = []
-    i = LD.shape[0] - 1
-    j = LD.shape[1] - 1
+    i = dist.shape[0] - 1
+    j = dist.shape[1] - 1
     while i > 0 or j > 0:
         path.append((i, j))
         if pred[i, j] == 1:
@@ -205,4 +204,4 @@ def dtw(x, y, dist):
     path.append((0, 0))
     path.reverse()
     
-    return AD[-1, -1] / (len(x) + len(y)), LD, AD, path
+    return AD[-1, -1] / (len(x) + len(y)), dist, AD, path
