@@ -84,6 +84,8 @@ def preemp(input, p=0.97):
         output: array of pre-emphasised speech samples
     Note (you can use the function lfilter from scipy.signal)
     """
+    # Transfer function of the pre-emphasis filter is H(z) = 1 - p * z^(-1)
+    # Numerator coefficients are [1, -p] and denominator is [1]
     return scipy.signal.lfilter([1, -p], 1, input)
 
 def windowing(input):
