@@ -1,5 +1,5 @@
 import numpy as np
-from tools2 import *
+from lab2_tools import *
 
 # already implemented
 def concatTwoHMMs(hmm1, hmm2):
