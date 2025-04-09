@@ -30,7 +30,7 @@ def log_multivariate_normal_density_diag(X, means, covars):
         lpr: array like, shape (n_observations, n_components)
     From scikit-learn/sklearn/mixture/gmm.py
     """
-    n_samples, n_dim = X.shape
+    _, n_dim = X.shape
     lpr = -0.5 * (n_dim * np.log(2 * np.pi) + np.sum(np.log(covars), 1)
                   + np.sum((means ** 2) / covars, 1)
                   - 2 * np.dot(X, (means / covars).T)

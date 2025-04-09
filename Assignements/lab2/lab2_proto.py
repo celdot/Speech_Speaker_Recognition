@@ -101,6 +101,8 @@ def gmmloglik(log_emlik, weights):
     Output:
         gmmloglik: scalar, log likelihood of data given the GMM model.
     """
+    return np.log(np.sum(np.exp(log_emlik) * weights, axis=1))
+    
 
 def forward(log_emlik, log_startprob, log_transmat):
     """Forward (alpha) probabilities in log domain.
@@ -113,6 +115,14 @@ def forward(log_emlik, log_startprob, log_transmat):
     Output:
         forward_prob: NxM array of forward log probabilities for each of the M states in the model
     """
+    N, M = log_emlik.shape
+    log_alpha = np.zeros((N, M))
+    log_alpha[0] = log_startprob[:-1] + log_emlik[0]
+    for n in range(1, N):
+        log_alpha[n] = log_emlik[n] + logsumexp(log_alpha[n-1][:, np.newaxis] + log_transmat[:-1, :-1], axis=0)
+    return log_alpha
+
+    
 
 def backward(log_emlik, log_startprob, log_transmat):
     """Backward (beta) probabilities in log domain.
@@ -125,6 +135,13 @@ def backward(log_emlik, log_startprob, log_transmat):
     Output:
         backward_prob: NxM array of backward log probabilities for each of the M states in the model
     """
+    backward_prob = np.zeros(log_emlik.shape)
+    N, M = log_emlik.shape
+    backward_prob[-1] = 0
+    for n in range(N-2, -1, -1):
+        backward_prob[n] = logsumexp(backward_prob[n+1] + log_transmat[:-1] + log_emlik[n+1], axis=1)
+    return backward_prob
+
 
 def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
     """Viterbi path.
@@ -140,6 +157,23 @@ def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
         viterbi_loglik: log likelihood of the best path
         viterbi_path: best path
     """
+    log_V = np.zeros(log_emlik.shape)
+    N, M = log_emlik.shape
+    log_V[0] = log_startprob + log_emlik[0]
+    for n in range(1, N):
+        log_V[n] = log_emlik[n] + logsumexp(log_V[n-1] + log_transmat[:-1], axis=1)
+    if forceFinalState:
+        best_state = np.argmax(log_V[-1])
+    else:
+        best_state = np.argmax(log_V[-1][:-1])
+    viterbi_loglik = log_V[-1][best_state]
+    viterbi_path = np.zeros(N, dtype=int)
+    viterbi_path[-1] = best_state
+    for n in range(N-2, -1, -1):
+        best_state = np.argmax(log_V[n] + log_transmat[best_state])
+        viterbi_path[n] = best_state
+    return viterbi_loglik, viterbi_path
+    
 
 def statePosteriors(log_alpha, log_beta):
     """State posterior (gamma) probabilities in log domain.
@@ -152,6 +186,9 @@ def statePosteriors(log_alpha, log_beta):
     Output:
         log_gamma: NxM array of gamma probabilities for each of the M states in the model
     """
+    log_gamma = log_alpha + log_beta
+    log_gamma -= logsumexp(log_gamma, axis=1)[:, np.newaxis]
+    return log_gamma
 
 def updateMeanAndVar(X, log_gamma, varianceFloor=5.0):
     """ Update Gaussian parameters with diagonal covariance
