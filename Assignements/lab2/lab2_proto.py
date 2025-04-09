@@ -117,9 +117,10 @@ def forward(log_emlik, log_startprob, log_transmat):
     """
     N, M = log_emlik.shape
     log_alpha = np.zeros((N, M))
-    log_alpha[0] = log_startprob[:-1] + log_emlik[0]
+    log_alpha[0] = log_startprob + log_emlik[0]
     for n in range(1, N):
-        log_alpha[n] = log_emlik[n] + logsumexp(log_alpha[n-1][:, np.newaxis] + log_transmat[:-1, :-1], axis=0)
+        for j in range(M):
+            log_alpha[n, j] = log_emlik[n, j] + logsumexp(log_alpha[n-1] + log_transmat[:, j])
     return log_alpha
 
     
@@ -139,8 +140,10 @@ def backward(log_emlik, log_startprob, log_transmat):
     N, M = log_emlik.shape
     backward_prob[-1] = 0
     for n in range(N-2, -1, -1):
-        backward_prob[n] = logsumexp(backward_prob[n+1] + log_transmat[:-1] + log_emlik[n+1], axis=1)
+        for i in range(M):
+            backward_prob[n, i] = logsumexp(log_emlik[n+1] + log_transmat[i] + backward_prob[n+1])
     return backward_prob
+
 
 
 def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
@@ -159,21 +162,28 @@ def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
     """
     log_V = np.zeros(log_emlik.shape)
     N, M = log_emlik.shape
+    
     log_V[0] = log_startprob + log_emlik[0]
     for n in range(1, N):
-        log_V[n] = log_emlik[n] + logsumexp(log_V[n-1] + log_transmat[:-1], axis=1)
+        for j in range(M):
+            log_V[n, j] = log_emlik[n, j] + np.max(log_V[n-1] + log_transmat[:, j])    
+    
     if forceFinalState:
-        best_state = np.argmax(log_V[-1])
+        best_state = len(log_V[-1]) - 1
     else:
-        best_state = np.argmax(log_V[-1][:-1])
+        best_state = np.argmax(log_V[-1])
+
     viterbi_loglik = log_V[-1][best_state]
+
     viterbi_path = np.zeros(N, dtype=int)
     viterbi_path[-1] = best_state
-    for n in range(N-2, -1, -1):
-        best_state = np.argmax(log_V[n] + log_transmat[best_state])
-        viterbi_path[n] = best_state
-    return viterbi_loglik, viterbi_path
     
+    for n in range(N-2, -1, -1):
+        best_state = np.argmax(log_V[n])
+        viterbi_path[n] = best_state
+    
+    return viterbi_loglik, viterbi_path
+
 
 def statePosteriors(log_alpha, log_beta):
     """State posterior (gamma) probabilities in log domain.
