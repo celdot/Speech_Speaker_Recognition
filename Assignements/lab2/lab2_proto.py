@@ -1,5 +1,7 @@
 import numpy as np
+
 from lab2_tools import *
+
 
 # already implemented
 def concatTwoHMMs(hmm1, hmm2):
@@ -215,3 +217,20 @@ def updateMeanAndVar(X, log_gamma, varianceFloor=5.0):
          means: MxD mean vectors for each state
          covars: MxD covariance (variance) vectors for each state
     """
+    D = X.shape[1]
+    M = log_gamma.shape[1]
+    
+    means = np.zeros((M, D))
+    covars = np.zeros((M, D))
+    # gamma = np.exp(log_gamma - logsumexp(log_gamma, axis=1))
+    gamma = np.exp(log_gamma)
+    
+    for i in range(M):
+        sum_gamma_i = np.sum(gamma[:, i])
+        means[i] = np.sum(gamma[:, i][:, np.newaxis] * X, axis=0) / sum_gamma_i
+        new_var = np.sum(gamma[:, i][:, np.newaxis] * (X - means[i]) ** 2, axis=0) / sum_gamma_i
+        covars[i] = np.maximum(new_var, varianceFloor)
+        
+    return means, covars
+    
+    
