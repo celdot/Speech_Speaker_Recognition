@@ -1,6 +1,5 @@
 import numpy as np
 import os
-#from pysndfile import sndio
 import soundfile as sf
 
 def path2info(path):
@@ -17,22 +16,6 @@ def path2info(path):
     digits = filename[:-5]
     repetition = filename[-5]
     return gender, speakerID, digits, repetition
-
-def loadAudioPySndFile(filename):
-    """
-    loadAudioPySndFile: loads audio data from file using pysndfile
-
-    NOTE: This is not used any longer because pysndfile is difficult to install on Windows
-
-    Note that, by default pysndfile converts the samples into floating point
-    numbers and rescales them in the range [-1, 1]. This is avoided by specifying
-    the option dtype=np.int16 which keeps both the original data type and range
-    of values.
-    """
-    sndobj = sndio.read(filename, dtype=np.int16)
-    samplingrate = sndobj[1]
-    samples = np.array(sndobj[0])
-    return samples, samplingrate
 
 def loadAudio(filename):
     """
