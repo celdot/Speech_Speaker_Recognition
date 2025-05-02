@@ -10,6 +10,7 @@ def path2info(path):
     Example:
     path2info('tidigits/disc_4.1.1/tidigits/train/man/ae/z9z6531a.wav')
     """
+    path = path.replace('\\', '/')
     rest, filename = os.path.split(path)
     rest, speakerID = os.path.split(rest)
     rest, gender = os.path.split(rest)

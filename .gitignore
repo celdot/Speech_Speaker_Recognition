@@ -4,3 +4,8 @@ Assignements/*/__pycache__
 Assignements/lab3/tidigits
 Assignements/lab3/test_data.npz
 Assignements/lab3/train_data.npz
+Assignements/lab3/data
+Assignements/lab3/runs
+*.npz
+*.zip
+*.pt
