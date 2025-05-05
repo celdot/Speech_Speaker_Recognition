@@ -6,6 +6,7 @@ Assignements/lab3/test_data.npz
 Assignements/lab3/train_data.npz
 Assignements/lab3/data
 Assignements/lab3/runs
-*.npz
 *.zip
-*.pt
+Assignements/lab3/lmfcc.npz
+Assignements/lab3/targets.npz
+Assignements/lab3/mspec.npz
