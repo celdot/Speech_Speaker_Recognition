@@ -1,0 +1,11 @@
+Evaluating lmfcc_4h...
+Frame Accuracy (State):   0.7467
+Frame Accuracy (Phoneme): 0.8348
+Edit Distance (State):    0.5185
+Edit Distance (Phoneme):  0.4609
+
+Evaluating mspec_4h...
+Frame Accuracy (State):   0.7384
+Frame Accuracy (Phoneme): 0.8356
+Edit Distance (State):    0.5009
+Edit Distance (Phoneme):  0.4462
