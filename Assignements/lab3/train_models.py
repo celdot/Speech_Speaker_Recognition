@@ -147,7 +147,6 @@ class MLPRelu(nn.Module):
             x = layer(x)
             x = F.relu(x)
         x = self.output_layer(x)
-        x = F.log_softmax(x, dim=0)
         return x
 
 
