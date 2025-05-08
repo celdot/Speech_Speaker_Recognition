@@ -1,11 +1,23 @@
-Evaluating lmfcc_4h...
-Frame Accuracy (State):   0.7467
-Frame Accuracy (Phoneme): 0.8348
-Edit Distance (State):    0.5185
-Edit Distance (Phoneme):  0.4609
+Evaluating lmfcc_1h...                  Evaluating lmfcc_4h...
+Frame Accuracy (State): 0.7437          Frame Accuracy (State): 0.7467
+Frame Accuracy (Phoneme): 0.8312        Frame Accuracy (Phoneme): 0.8348
+Edit Distance (State): 0.5564           Edit Distance (State): 0.5185
+Edit Distance (Phoneme): 0.4959         Edit Distance (Phoneme): 0.4609
 
-Evaluating mspec_4h...
-Frame Accuracy (State):   0.7384
-Frame Accuracy (Phoneme): 0.8356
-Edit Distance (State):    0.5009
-Edit Distance (Phoneme):  0.4462
+Evaluating mspec_1h...                  Evaluating mspec_4h...
+Frame Accuracy (State): 0.7350          Frame Accuracy (State): 0.7384
+Frame Accuracy (Phoneme): 0.8319        Frame Accuracy (Phoneme): 0.8356
+Edit Distance (State): 0.4988           Edit Distance (State): 0.5009
+Edit Distance (Phoneme): 0.4376         Edit Distance (Phoneme): 0.4462
+
+Evaluating single_lmfcc_1h...           Evaluating single_lmfcc_4h...
+Frame Accuracy (State): 0.5612          Frame Accuracy (State): 0.5634
+Frame Accuracy (Phoneme): 0.6703        Frame Accuracy (Phoneme): 0.6746
+Edit Distance (State): 1.0986           Edit Distance (State): 1.1229
+Edit Distance (Phoneme): 0.9596         Edit Distance (Phoneme): 0.9853
+
+Evaluating single_mspec_1h...           Evaluating single_mspec_4h...
+Frame Accuracy (State): 0.5867          Frame Accuracy (State): 0.5842
+Frame Accuracy (Phoneme): 0.6965        Frame Accuracy (Phoneme): 0.6948
+Edit Distance (State): 1.0470           Edit Distance (State): 1.0783
+Edit Distance (Phoneme): 0.9121         Edit Distance (Phoneme): 0.9475
