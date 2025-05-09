@@ -25,7 +25,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 # train the network
-num_epochs = 50
+num_epochs = 30
 
 
 def load_data(feature_type="lmfcc"):
@@ -150,9 +150,28 @@ class MLPRelu(nn.Module):
         return x
 
 
+class MLPSigmoid(nn.Module):
+    def __init__(self, input_dim, output_dim, n_hidden):
+        super(MLPSigmoid, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.input_layer = nn.Linear(input_dim, 256)
+        self.layers = nn.ModuleList([nn.Linear(256, 256)
+                                    for _ in range(n_hidden)])
+        self.output_layer = nn.Linear(256, output_dim)
+
+    def forward(self, x):
+        x = self.input_layer(x)
+        x = torch.sigmoid(x)
+        for layer in self.layers:
+            x = layer(x)
+            x = torch.sigmoid(x)
+        x = self.output_layer(x)
+        return x
+
 # %%
 
-def train_MLPs(feature, n_hidden):
+def train_MLPs(Model, feature, n_hidden):
     X_train, X_val, _, y_train, y_val, _ = load_data(feature)
     X_train = X_train.to(device)
     X_val = X_val.to(device)
@@ -170,15 +189,18 @@ def train_MLPs(feature, n_hidden):
         val_dataset, batch_size=batch_size, shuffle=False)
 
     for n in n_hidden:
-        model = MLPRelu(X_train.shape[1], y_train.shape[1], n)
-        train_model(model, "{}_{}h".format(
+        model = Model(X_train.shape[1], y_train.shape[1], n)
+        train_model(model, "{}_{}_{}h".format(
+            Model.__name__,
             feature, n), train_loader, val_loader)
 
 
 if __name__ == "__main__":
     os.makedirs("models", exist_ok=True)
-    for feature in ["single_lmfcc", "single_mspec", "lmfcc", "mspec"]:
-        print("Training MLPs with {} features...".format(feature))
-        gc.collect()
-        torch.cuda.empty_cache()
-        train_MLPs(feature, [1, 4])
+    # for feature in ["single_lmfcc", "single_mspec", "lmfcc", "mspec"]:
+    #     print("Training MLPs with {} features...".format(feature))
+    #     gc.collect()
+    #     torch.cuda.empty_cache()
+    #     train_MLPs(feature, [1, 4])
+    print("Training MLP (sigmoid) with lmfcc features...")
+    train_MLPs(MLPSigmoid, "lmfcc", [4])
