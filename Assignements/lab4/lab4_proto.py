@@ -98,28 +98,26 @@ def dataProcessing(data, transform):
         # append lengths
         input_lengths.append(spectrogram.shape[0] // 2)
         label_lengths.append(len(label))
+        labels.append(label)
 
-    print(len(spectrograms))
-    print(len(labels))
-
-    max_input_length = max(input_lengths)
+    max_input_length = max([s.shape[0] for s in spectrograms])
     max_label_length = max(label_lengths)
     for i in range(len(spectrograms)):
         if spectrograms[i].shape[0] < max_input_length:
             # pad spectrograms to max_input_length
             spectrograms[i] = torch.nn.functional.pad(
                 spectrograms[i], (0, 0, 0, max_input_length - spectrograms[i].shape[0]), value=0)
-            print(spectrograms[i].shape)
         if len(labels[i]) < max_label_length:
             # pad labels to max_label_length
             labels[i] = torch.nn.functional.pad(
                 labels[i], (0, max_label_length - len(labels[i])), value=0)
-            print(labels[i].shape)
 
     # stack spectrograms and labels
     spectrograms = torch.stack(spectrograms, dim=0)
     spectrograms = spectrograms.unsqueeze(1).transpose(2, 3)
     labels = torch.stack(labels, dim=0)
+
+    return spectrograms, labels, input_lengths, label_lengths
 
 
 def greedyDecoder(output, blank_label=28):
