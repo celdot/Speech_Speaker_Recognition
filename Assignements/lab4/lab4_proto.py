@@ -8,7 +8,7 @@ from torchvision.transforms import Compose
 # Variables to be defined --------------------------------------
 """ 
 train-time audio transform object, that transforms waveform -> spectrogram, with augmentation
-""" 
+"""
 train_audio_transform = Compose([
     MelSpectrogram(n_mels=80),
     FrequencyMasking(freq_mask_param=15),
@@ -22,6 +22,7 @@ test_audio_transform = Compose([
 ])
 
 # Functions to be implemented ----------------------------------
+
 
 def intToStr(labels):
     """
@@ -41,6 +42,7 @@ def intToStr(labels):
             res.append(chr(labels[i] - 2 + ord('a')))
     return ' '.join(res)
 
+
 def strToInt(text):
     """
         convert string to list of integers
@@ -59,6 +61,7 @@ def strToInt(text):
         else:
             res.append(ord(text[i]) - ord('a') + 2)
     return res
+
 
 def dataProcessing(data, transform):
     """
@@ -81,14 +84,14 @@ def dataProcessing(data, transform):
     labels = []
     input_lengths = []
     label_lengths = []
-    
+
     for i in range(len(data)):
         waveform, sample_rate, utterance, speaker_id, chapter_id, utterance_id = data[i]
         # apply transform to waveform
         spectrogram = transform(waveform).squeeze(0).transpose(0, 1)
         # Shape of spectrogram is (time, n_mels)
         spectrograms.append(spectrogram)
-        
+
         # convert utterance to list of integers
         label = strToInt(utterance)
         label = torch.tensor(label, dtype=torch.long)
@@ -98,7 +101,7 @@ def dataProcessing(data, transform):
 
     print(len(spectrograms))
     print(len(labels))
-        
+
     max_input_length = max(input_lengths)
     max_label_length = max(label_lengths)
     for i in range(len(spectrograms)):
@@ -112,17 +115,13 @@ def dataProcessing(data, transform):
             labels[i] = torch.nn.functional.pad(
                 labels[i], (0, max_label_length - len(labels[i])), value=0)
             print(labels[i].shape)
-    
+
     # stack spectrograms and labels
     spectrograms = torch.stack(spectrograms, dim=0)
     spectrograms = spectrograms.unsqueeze(1).transpose(2, 3)
     labels = torch.stack(labels, dim=0)
-    
-    
-    
-    
-    
-    
+
+
 def greedyDecoder(output, blank_label=28):
     """
     decode a batch of utterances 
@@ -132,8 +131,29 @@ def greedyDecoder(output, blank_label=28):
     returns:
         list of decoded strings
     """
+    # Extract the most probable label for each time step
+    _, predicted_labels = torch.max(output, dim=2)
+    # merge repeated labels
+    merged_labels = []
+    for i in range(predicted_labels.shape[0]):
+        merged_labels.append([])
+        prev_label = -1
+        for j in range(predicted_labels.shape[1]):
+            if predicted_labels[i][j] != prev_label:
+                merged_labels[i].append(predicted_labels[i][j])
+                prev_label = predicted_labels[i][j]
+    # convert to string and remove blank labels
+    decoded_strings = []
+    for i in range(len(merged_labels)):
+        decoded_string = []
+        for j in range(len(merged_labels[i])):
+            if merged_labels[i][j] != blank_label:
+                decoded_string.append(merged_labels[i][j])
+        decoded_strings.append(intToStr(decoded_string))
+    return decoded_strings
 
-def levenshteinDistance(ref,hyp):
+
+def levenshteinDistance(ref, hyp):
     """
     calculate levenshtein distance (edit distance) between two sequences
     arguments:
@@ -142,3 +162,20 @@ def levenshteinDistance(ref,hyp):
     output:
         edit distance (int)
     """
+    d = [[0] * (len(hyp) + 1) for _ in range(len(ref) + 1)]
+    for i in range(len(ref) + 1):
+        d[i][0] = i
+    for j in range(len(hyp) + 1):
+        d[0][j] = j
+
+    for i in range(1, len(ref) + 1):
+        for j in range(1, len(hyp) + 1):
+            if ref[i - 1] == hyp[j - 1]:
+                d[i][j] = d[i - 1][j - 1]
+            else:
+                d[i][j] = min(
+                    d[i - 1][j] + 1,
+                    d[i][j - 1] + 1,
+                    d[i - 1][j - 1] + 1
+                )
+    return d[len(ref)][len(hyp)]
