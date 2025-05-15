@@ -9,6 +9,8 @@ import torch.optim as optim
 import numpy as np
 import argparse
 
+from lab4_proto import*
+
 '''
 HYPERPARAMETERS
 '''
@@ -207,7 +209,7 @@ def test(model, device, test_loader, criterion, epoch):
 			# get target text
 			decoded_targets = []
 			for i in range(len(labels)):
-				decoded_targets.append(intToText(labels[i][:label_lengths[i]].tolist()))
+				decoded_targets.append(intToStr(labels[i][:label_lengths[i]].tolist()))
 
 			# get predicted text
 			decoded_preds = greedyDecoder(output)
