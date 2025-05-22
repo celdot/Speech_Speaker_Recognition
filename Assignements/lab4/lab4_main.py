@@ -416,6 +416,7 @@ if __name__ == '__main__':
 
     args = argparser.parse_args()
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+    print('ROOT_DIR:', ROOT_DIR)
     
     main(ROOT_DIR, args.mode, args.model, args.wavfiles, args.use_language_model, args.grid_search)
 

@@ -10,3 +10,8 @@ Assignements/lab3/runs
 Assignements/lab3/lmfcc.npz
 Assignements/lab3/targets.npz
 Assignements/lab3/mspec.npz
+Assignements/lab4/train-clean-100.tar.gz
+Assignements/lab4/test-clean.tar.gz
+Assignements/lab4/dev-clean.tar.gz
+Assignements/lab4/LibriSpeech/*
+
