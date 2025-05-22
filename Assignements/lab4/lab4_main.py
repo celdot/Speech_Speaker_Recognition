@@ -30,8 +30,13 @@ hparams = {
     "stride": 2,
     "dropout": 0.1,
     "learning_rate": 5e-4,
+<<<<<<< Updated upstream
     "batch_size": 16,
     "epochs": 3
+=======
+    "batch_size": 20,
+    "epochs": 20
+>>>>>>> Stashed changes
 }
 
 
@@ -200,7 +205,11 @@ TRAINING AND TESTING
 def train(model, device, train_loader, criterion, optimizer, epoch):
     model.train()
     data_len = len(train_loader.dataset)
+<<<<<<< Updated upstream
     for batch_idx, _data in tqdm(enumerate(train_loader)):
+=======
+    for batch_idx, _data in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
+>>>>>>> Stashed changes
         spectrograms, labels, input_lengths, label_lengths = _data
         spectrograms, labels = spectrograms.to(device), labels.to(device)
 
@@ -226,7 +235,7 @@ def test(model, device, test_loader, criterion, epoch):
     test_loss = 0
     test_cer, test_wer = [], []
     with torch.no_grad():
-        for I, _data in enumerate(test_loader):
+        for I, _data in tqdm(enumerate(test_loader), desc="Testing", total=len(test_loader)):
             spectrograms, labels, input_lengths, label_lengths = _data
             spectrograms, labels = spectrograms.to(device), labels.to(device)
 
@@ -313,6 +322,7 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(7)
     device = torch.device("cuda" if use_cuda else "cpu")
+    print('Using device:', device)
 
     train_dataset = torchaudio.datasets.LIBRISPEECH(
         ".", url='train-clean-100', download=True)
@@ -323,25 +333,25 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
     train_loader = data.DataLoader(dataset=train_dataset,
-                                   batch_size=hparams['batch_size'],
-                                   shuffle=True,
-                                   collate_fn=lambda x: dataProcessing(
-                                       x, train_audio_transform),
-                                   **kwargs)
+                                    batch_size=hparams['batch_size'],
+                                    shuffle=True,
+                                    collate_fn=lambda x: dataProcessing(
+                                        x, train_audio_transform),
+                                    **kwargs)
 
     val_loader = data.DataLoader(dataset=val_dataset,
-                                 batch_size=hparams['batch_size'],
-                                 shuffle=True,
-                                 collate_fn=lambda x: dataProcessing(
-                                     x, test_audio_transform),
-                                 **kwargs)
+                                    batch_size=hparams['batch_size'],
+                                    shuffle=True,
+                                    collate_fn=lambda x: dataProcessing(
+                                        x, test_audio_transform),
+                                    **kwargs)
 
     test_loader = data.DataLoader(dataset=test_dataset,
-                                  batch_size=hparams['batch_size'],
-                                  shuffle=False,
-                                  collate_fn=lambda x: dataProcessing(
-                                      x, test_audio_transform),
-                                  **kwargs)
+                                    batch_size=hparams['batch_size'],
+                                    shuffle=False,
+                                    collate_fn=lambda x: dataProcessing(
+                                        x, test_audio_transform),
+                                    **kwargs)
 
     model = SpeechRecognitionModel(
         hparams['n_cnn_layers'],
@@ -366,14 +376,22 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         model.load_state_dict(torch.load(model))
 
     if mode == 'train':
-        best_cer = 1.0
-        for epoch in tqdm(range(hparams['epochs'])):
+        best_cer = float("inf")
+        for epoch in range(hparams['epochs']):
             train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
             print('Epoch:', epoch, 'Train Loss:', train_loss)
+<<<<<<< Updated upstream
             # cer, _ = test(model, device, val_loader, criterion, epoch)
             # if cer < best_cer:
             #     best_cer = cer
             #     torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
+=======
+            cer, wer = test(model, device, val_loader, criterion, epoch)
+            print('Epoch:', epoch, 'Validation CER:', cer, 'Validation WER:', wer)
+            if cer < best_cer:
+                best_cer = cer
+                torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
+>>>>>>> Stashed changes
 
     elif mode == 'test':
         test(model, device, test_loader, criterion, -1)
