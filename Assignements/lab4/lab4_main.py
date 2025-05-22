@@ -16,6 +16,8 @@ from tqdm import tqdm
 
 from lab4_proto import *
 
+torch.backends.cudnn.enabled = False
+
 """
 HYPERPARAMETERS
 """
@@ -29,7 +31,7 @@ hparams = {
     "dropout": 0.1,
     "learning_rate": 5e-4,
     "batch_size": 16,
-    "epochs": 20
+    "epochs": 3
 }
 
 
@@ -198,7 +200,7 @@ TRAINING AND TESTING
 def train(model, device, train_loader, criterion, optimizer, epoch):
     model.train()
     data_len = len(train_loader.dataset)
-    for batch_idx, _data in enumerate(train_loader):
+    for batch_idx, _data in tqdm(enumerate(train_loader)):
         spectrograms, labels, input_lengths, label_lengths = _data
         spectrograms, labels = spectrograms.to(device), labels.to(device)
 
@@ -210,12 +212,12 @@ def train(model, device, train_loader, criterion, optimizer, epoch):
                          input_lengths, label_lengths)
         loss.backward()
         optimizer.step()
-        # if batch_idx % 100 == 0 or batch_idx == data_len:
+        # if epoch == 0 and (batch_idx % 100 == 0 or batch_idx == data_len):
         #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
         #         epoch, batch_idx * len(spectrograms), data_len,
         #         100. * batch_idx / len(train_loader), loss.item()))
             
-        return loss.item()
+    return loss.item()
 
 
 def test(model, device, test_loader, criterion, epoch):
@@ -351,9 +353,9 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         hparams['dropout']
     ).to(device)
 
-    print(model)
-    print('Num Model Parameters', sum(
-        [param.nelement() for param in model.parameters()]))
+    # print(model)
+    # print('Num Model Parameters', sum(
+    #     [param.nelement() for param in model.parameters()]))
 
     optimizer = optim.AdamW(model.parameters(), hparams['learning_rate'])
     criterion = nn.CTCLoss(blank=28).to(device)
@@ -368,10 +370,10 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         for epoch in tqdm(range(hparams['epochs'])):
             train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
             print('Epoch:', epoch, 'Train Loss:', train_loss)
-            cer, _ = test(model, device, val_loader, criterion, epoch)
-            if cer < best_cer:
-                best_cer = cer
-                torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
+            # cer, _ = test(model, device, val_loader, criterion, epoch)
+            # if cer < best_cer:
+            #     best_cer = cer
+            #     torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
 
     elif mode == 'test':
         test(model, device, test_loader, criterion, -1)
@@ -416,6 +418,11 @@ if __name__ == '__main__':
 
     args = argparser.parse_args()
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+    # print cuda device 
+    if torch.cuda.is_available():
+        print('Using GPU:', torch.cuda.get_device_name(0))
+    else:
+        print('Using CPU')
     print('ROOT_DIR:', ROOT_DIR)
     
     main(ROOT_DIR, args.mode, args.model, args.wavfiles, args.use_language_model, args.grid_search)
