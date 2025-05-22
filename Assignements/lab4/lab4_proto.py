@@ -1,6 +1,7 @@
 
 # DT2119, Lab 4 End-to-end Speech Recognition
 
+import numpy as np
 import torch
 import torchaudio
 from torch.nn.utils.rnn import pad_sequence
@@ -145,25 +146,23 @@ def levenshteinDistance(ref,hyp):
     m = len(ref)
     n = len(hyp)
 
-    # Initialize the d
-    d = [[0 for _ in range(n + 1)] for _ in range(m + 1)]
+    # Initialize the distance matrix
+    d = np.zeros((m + 1, n + 1), dtype=int)
 
     # Fill the first row and first column
-    for i in range(m + 1):
-        d[i][0] = i
-    for j in range(n + 1):
-        d[0][j] = j
+    d[:, 0] = np.arange(m + 1)
+    d[0, :] = np.arange(n + 1)
 
     # Compute Levenshtein distance
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             if ref[i - 1] == hyp[j - 1]:
-                d[i][j] = d[i - 1][j - 1]
+                d[i, j] = d[i - 1, j - 1]
             else:
-                d[i][j] = min(
-                    d[i - 1][j] + 1,    # deletion
-                    d[i][j - 1] + 1,    # insertion
-                    d[i - 1][j - 1] + 1 # substitution
+                d[i, j] = min(
+                    d[i - 1, j] + 1,    # deletion
+                    d[i, j - 1] + 1,    # insertion
+                    d[i - 1, j - 1] + 1 # substitution
                 )
 
-    return d[m][n]
+    return d[m, n]
