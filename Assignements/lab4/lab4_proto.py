@@ -1,7 +1,7 @@
 import torch
-from torchaudio.transforms import MelSpectrogram, FrequencyMasking, TimeMasking, Resample
+from torchaudio.transforms import (FrequencyMasking, MelSpectrogram, Resample,
+                                   TimeMasking)
 from torchvision.transforms import Compose
-
 
 # DT2119, Lab 4 End-to-end Speech Recognition
 
@@ -32,14 +32,12 @@ def intToStr(labels):
     Returns:
         string with space-separated characters
     """
+    num_to_char = {0: "'", 1: "_"}
+    num_to_char.update({i + 2: chr(i + 97) for i in range(26)})
+    
     res = []
     for i in range(len(labels)):
-        if labels[i] == 0:
-            res.append("'")
-        elif labels[i] == 1:
-            res.append("_")
-        else:
-            res.append(chr(labels[i] - 2 + ord('a')))
+        res.append(num_to_char[labels[i]])
     return ' '.join(res)
 
 
@@ -51,15 +49,13 @@ def strToInt(text):
     Returns:
         list of ints
     """
+    char_to_num = {"'": 0, "_": 1}
+    char_to_num.update({chr(i + 97): i + 2 for i in range(26)})
+    
     text = text.replace(" ", "_").lower()
     res = []
     for i in range(len(text)):
-        if text[i] == "'":
-            res.append(0)
-        elif text[i] == "_":
-            res.append(1)
-        else:
-            res.append(ord(text[i]) - ord('a') + 2)
+        res.append(char_to_num[text[i]])
     return res
 
 

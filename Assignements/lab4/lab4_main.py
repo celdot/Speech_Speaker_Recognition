@@ -1,13 +1,18 @@
 # DT2119, Lab 4 End-to-end Speech Recognition
 
-import torch
-from torch import nn
-import torchaudio
-import torch.nn.functional as F
-import torch.utils.data as data
-import torch.optim as optim
-import numpy as np
 import argparse
+import itertools
+import os
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
+import torch.utils.data as data
+import torchaudio
+from pyctcdecode import build_ctcdecoder
+from torch import nn
+from tqdm import tqdm
 
 from lab4_proto import *
 
@@ -23,7 +28,7 @@ hparams = {
     "stride": 2,
     "dropout": 0.1,
     "learning_rate": 5e-4,
-    "batch_size": 30,
+    "batch_size": 16,
     "epochs": 20
 }
 
@@ -205,10 +210,12 @@ def train(model, device, train_loader, criterion, optimizer, epoch):
                          input_lengths, label_lengths)
         loss.backward()
         optimizer.step()
-        if batch_idx % 100 == 0 or batch_idx == data_len:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(spectrograms), data_len,
-                100. * batch_idx / len(train_loader), loss.item()))
+        # if batch_idx % 100 == 0 or batch_idx == data_len:
+        #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+        #         epoch, batch_idx * len(spectrograms), data_len,
+        #         100. * batch_idx / len(train_loader), loss.item()))
+            
+        return loss.item()
 
 
 def test(model, device, test_loader, criterion, epoch):
@@ -248,19 +255,59 @@ def test(model, device, test_loader, criterion, epoch):
         test_loss, avg_cer, avg_wer))
     return avg_cer, avg_wer
 
+"""
+GRID SEARCH FOR LANGUAGE MODEL PARAMETERS
+"""
+
+def grid_search_lm_params(model, device, val_loader, root_dir):
+    print("Starting grid search over alpha and beta...")
+
+    alphas = [0.2, 0.5, 1.0, 1.5]
+    betas = [0.5, 1.0, 1.5, 2.0]
+    kenlm_model_path = os.path.join(root_dir, "wiki-interpolate.3gram.arpa")
+
+    best_wer = float("inf")
+    best_alpha = None
+    best_beta = None
+
+    model.eval()
+    with torch.no_grad():
+        for alpha, beta in itertools.product(alphas, betas):
+            decoder = build_ctcdecoder(
+                [chr(i + 97) for i in range(26)] + ["'", "_"],
+                kenlm_model_path=kenlm_model_path,
+                alpha=alpha,
+                beta=beta
+            )
+
+            total_wer = []
+            for data in val_loader:
+                spectrograms, labels, _, label_lengths = data
+                spectrograms, labels = spectrograms.to(device), labels.to(device)
+                output = model(spectrograms)
+
+                decoded_targets = [intToStr(labels[i][:label_lengths[i]].tolist())
+                                   for i in range(len(labels))]
+
+                for i in range(len(spectrograms)):
+                    pred = decoder.decode(output[i].cpu().detach().numpy())
+                    total_wer.append(wer(decoded_targets[i], pred))
+
+            avg_wer = sum(total_wer) / len(total_wer)
+            print(f"alpha={alpha}, beta={beta}, WER={avg_wer:.4f}")
+
+            if avg_wer < best_wer:
+                best_wer = avg_wer
+                best_alpha, best_beta = alpha, beta
+
+    print(f"\nBest WER: {best_wer:.4f} with alpha={best_alpha} and beta={best_beta}")
+
+
 
 """
 MAIN PROGRAM
 """
-if __name__ == '__main__':
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('--mode', help='train, test or recognize')
-    argparser.add_argument('--model', type=str,
-                           help='model to load', default='')
-    argparser.add_argument('wavfiles', nargs='*', help='wavfiles to recognize')
-
-    args = argparser.parse_args()
-
+def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_search=False):
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(7)
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -311,31 +358,65 @@ if __name__ == '__main__':
     optimizer = optim.AdamW(model.parameters(), hparams['learning_rate'])
     criterion = nn.CTCLoss(blank=28).to(device)
 
-    print(args.mode)
+    print(mode)
 
-    if args.model != '':
-        model.load_state_dict(torch.load(args.model))
+    if model_load != '':
+        model.load_state_dict(torch.load(model))
 
-    if args.mode == 'train':
+    if mode == 'train':
         best_cer = 1.0
-        best_wer = 1.0
-        for epoch in range(hparams['epochs']):
-            train(model, device, train_loader, criterion, optimizer, epoch)
-            cer, wer = test(model, device, val_loader, criterion, epoch)
+        for epoch in tqdm(range(hparams['epochs'])):
+            train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
+            print('Epoch:', epoch, 'Train Loss:', train_loss)
+            cer, _ = test(model, device, val_loader, criterion, epoch)
             if cer < best_cer:
                 best_cer = cer
-                best_wer = wer
-                torch.save(model.state_dict(), 'best_model.pth')
+                torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
 
-    elif args.mode == 'test':
+    elif mode == 'test':
         test(model, device, test_loader, criterion, -1)
+        
+    if use_language_model:
+        # Path to your ARPA language model
+        kenlm_model_path = os.path.join(root_dir, "wiki-interpolate.3gram.arpa")
 
-    elif args.mode == 'recognize':
-        for wavfile in args.wavfiles:
-            waveform, sample_rate = torchaudio.load(wavfile, normalize=True)
+        decoder = build_ctcdecoder(
+            [chr(i + 97) for i in range(26)] + ["'", "_"],
+            kenlm_model_path=kenlm_model_path,
+            alpha=0.5,  # LM weight
+            beta=1.0    # Word insertion bonus
+        )
+        
+    if grid_search:
+        grid_search_lm_params(model, device, val_loader, root_dir)
+
+    elif mode == 'recognize':
+        for wavfile in wavfiles:
+            waveform, _ = torchaudio.load(wavfile, normalize=True)
             spectrogram = test_audio_transform(waveform)
-            input = torch.unsqueeze(spectrogram, dim=0).to(device)
-            output = model(input)
-            text = greedyDecoder(output)
+            wav_input = torch.unsqueeze(spectrogram, dim=0).to(device)
+            output = model(wav_input)
+            if use_language_model:
+                text = decoder.decode(output[0].cpu().detach().numpy())
+            else:
+                text = greedyDecoder(output)
             print('wavfile:', wavfile)
             print('text:', text)
+            
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--mode', help='train, test or recognize')
+    argparser.add_argument('--model', type=str,
+                           help='model to load', default='')
+    argparser.add_argument('wavfiles', nargs='*', help='wavfiles to recognize')
+    argparser.add_argument('--use_language_model', action='store_true',
+                        help='use language model for decoding')
+    argparser.add_argument('--grid_search', action='store_true',
+                        help='perform grid search on alpha/beta for language model')
+
+    args = argparser.parse_args()
+    ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    main(ROOT_DIR, args.mode, args.model, args.wavfiles, args.use_language_model, args.grid_search)
+
+
