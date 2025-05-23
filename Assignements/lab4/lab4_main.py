@@ -387,7 +387,7 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         # Path to your ARPA language model
         kenlm_model_path = os.path.join(root_dir, "wiki-interpolate.3gram.arpa")
         decoder_labels = [
-                "'", "_", " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
+                " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
                 "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
             ]
 
