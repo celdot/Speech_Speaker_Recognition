@@ -262,7 +262,7 @@ GRID SEARCH FOR LANGUAGE MODEL PARAMETERS
 """
 
 
-def grid_search_lm_params(model, device, val_loader, root_dir):
+def grid_search_lm_params(model, device, val_loader, root_dir, decoder_labels):
     print("Starting grid search over alpha and beta...")
 
     alphas = [0.2, 0.5, 1.0, 1.5]
@@ -277,7 +277,7 @@ def grid_search_lm_params(model, device, val_loader, root_dir):
     with torch.no_grad():
         for alpha, beta in itertools.product(alphas, betas):
             decoder = build_ctcdecoder(
-                [chr(i + 97) for i in range(26)] + ["'", "_"],
+                decoder_labels,
                 kenlm_model_path=kenlm_model_path,
                 alpha=alpha,
                 beta=beta
@@ -389,14 +389,14 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         print('Test set: Average loss: {:.4f}, Average CER: {:4f} Average WER: {:.4f}\n'.format(
             test_loss, avg_cer, avg_wer))
 
+    decoder_labels = intToStr(
+        list(range(0, hparams['n_class']-1))).split() + [""]  # 0-27
+    print('decoder_labels:', decoder_labels)
+
     if use_language_model:
         # Path to your ARPA language model
         kenlm_model_path = os.path.join(
             root_dir, "wiki-interpolate.3gram.arpa")
-        decoder_labels = [
-            " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
-            "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-        ]
 
         decoder = build_ctcdecoder(
             decoder_labels,
@@ -406,7 +406,7 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         )
 
     if grid_search:
-        grid_search_lm_params(model, device, val_loader, root_dir)
+        grid_search_lm_params(model, device, val_loader, root_dir, decoder_labels)
 
     elif mode == 'recognize':
         for wavfile in wavfiles:
@@ -415,9 +415,10 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
             wav_input = torch.unsqueeze(spectrogram, dim=0).to(device)
             output = model(wav_input)
             if use_language_model:
-                text = decoder.decode(output[0].cpu().detach().numpy())
+                text = decoder.decode(output[0].cpu().detach().numpy()).replace('_', ' ')
             else:
                 text = greedyDecoder(output)
+                text = [x.replace(' ', '').replace('_', ' ') for x in text]
             print('wavfile:', wavfile)
             print('text:', text)
 
