@@ -386,9 +386,13 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     if use_language_model:
         # Path to your ARPA language model
         kenlm_model_path = os.path.join(root_dir, "wiki-interpolate.3gram.arpa")
+        decoder_labels = [
+                "'", "_", " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
+                "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+            ]
 
         decoder = build_ctcdecoder(
-            [chr(i + 97) for i in range(26)] + ["'", "_"],
+            decoder_labels,
             kenlm_model_path=kenlm_model_path,
             alpha=0.5,  # LM weight
             beta=1.0    # Word insertion bonus
