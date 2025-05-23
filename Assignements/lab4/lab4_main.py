@@ -31,7 +31,7 @@ hparams = {
     "stride": 2,
     "dropout": 0.1,
     "learning_rate": 5e-4,
-    "batch_size": 16,
+    "batch_size": 30,
     "epochs": 3
 }
 
@@ -275,7 +275,9 @@ def grid_search_lm_params(model, device, val_loader, root_dir, decoder_labels):
 
     model.eval()
     with torch.no_grad():
-        for alpha, beta in itertools.product(alphas, betas):
+        print("Performing grid search on a total of {} combinations".format(
+            len(alphas) * len(betas)))
+        for i, (alpha, beta) in enumerate(itertools.product(alphas, betas)):
             decoder = build_ctcdecoder(
                 decoder_labels,
                 kenlm_model_path=kenlm_model_path,
@@ -284,7 +286,7 @@ def grid_search_lm_params(model, device, val_loader, root_dir, decoder_labels):
             )
 
             total_wer = []
-            for data in val_loader:
+            for data in tqdm(val_loader, desc=f"Testing ({i} / {len(alphas)*len(betas)})", total=len(val_loader)):
                 spectrograms, labels, _, label_lengths = data
                 spectrograms, labels = spectrograms.to(
                     device), labels.to(device)
@@ -319,22 +321,23 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     device = torch.device("cuda" if use_cuda else "cpu")
     print('Using device:', device)
 
-    print("don't download train")
-    # train_dataset = torchaudio.datasets.LIBRISPEECH(
-    #    root_dir, url='train-clean-100', download=True)
+    kwargs = {'num_workers': 0, 'pin_memory': True} if use_cuda else {}
+    if mode == 'train':
+        train_dataset = torchaudio.datasets.LIBRISPEECH(
+            root_dir, url='train-clean-100', download=True)
+        train_loader = data.DataLoader(dataset=train_dataset,
+                                       batch_size=hparams['batch_size'],
+                                       shuffle=True,
+                                       collate_fn=lambda x: dataProcessing(
+                                           x, train_audio_transform),
+                                       **kwargs)
+    else:
+        print("don't download train")
+
     val_dataset = torchaudio.datasets.LIBRISPEECH(
         root_dir, url='dev-clean', download=True)
     test_dataset = torchaudio.datasets.LIBRISPEECH(
         root_dir, url='test-clean', download=True)
-
-    kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-    # train_loader = data.DataLoader(dataset=train_dataset,
-    #                                 batch_size=hparams['batch_size'],
-    #                                 shuffle=True,
-    #                                 collate_fn=lambda x: dataProcessing(
-    #                                    x, train_audio_transform),
-    #                                 **kwargs)
-
     val_loader = data.DataLoader(dataset=val_dataset,
                                  batch_size=hparams['batch_size'],
                                  shuffle=True,
@@ -359,13 +362,6 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         hparams['dropout']
     ).to(device)
 
-    # print(model)
-    # print('Num Model Parameters', sum(
-    #     [param.nelement() for param in model.parameters()]))
-
-    optimizer = optim.AdamW(model.parameters(), hparams['learning_rate'])
-    criterion = nn.CTCLoss(blank=28).to(device)
-
     print(mode)
 
     if model_load != '':
@@ -373,15 +369,25 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         model.load_state_dict((torch.load(model_load, weights_only=True)))
 
     if mode == 'train':
+        print(model)
+        print('Num Model Parameters', sum(
+            [param.nelement() for param in model.parameters()]))
+
+        optimizer = optim.AdamW(model.parameters(), hparams['learning_rate'])
+        criterion = nn.CTCLoss(blank=28).to(device)
+
         best_cer = float("inf")
-        # for epoch in range(hparams['epochs']):
-        #     train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
-        #     print('Epoch:', epoch, 'Train Loss:', train_loss)
-        #     cer, wer = test(model, device, val_loader, criterion, epoch)
-        #     print('Epoch:', epoch, 'Validation CER:', cer, 'Validation WER:', wer)
-        #     if cer < best_cer:
-        #         best_cer = cer
-        #         torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
+        for epoch in range(hparams['epochs']):
+            train_loss = train(model, device, train_loader,
+                               criterion, optimizer, epoch)
+            print('Epoch:', epoch, 'Train Loss:', train_loss)
+            cer, wer = test(model, device, val_loader, criterion, epoch)
+            print('Epoch:', epoch, 'Validation CER:',
+                  cer, 'Validation WER:', wer)
+            if cer < best_cer:
+                best_cer = cer
+                torch.save(model.state_dict(), os.path.join(
+                    root_dir, 'best_model.pth'))
 
     elif mode == 'test':
         avg_cer, avg_wer, test_loss = test(
@@ -406,7 +412,8 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         )
 
     if grid_search:
-        grid_search_lm_params(model, device, val_loader, root_dir, decoder_labels)
+        grid_search_lm_params(model, device, val_loader,
+                              root_dir, decoder_labels)
 
     elif mode == 'recognize':
         for wavfile in wavfiles:
@@ -415,7 +422,8 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
             wav_input = torch.unsqueeze(spectrogram, dim=0).to(device)
             output = model(wav_input)
             if use_language_model:
-                text = decoder.decode(output[0].cpu().detach().numpy()).replace('_', ' ')
+                text = decoder.decode(
+                    output[0].cpu().detach().numpy()).replace('_', ' ')
             else:
                 text = greedyDecoder(output)
                 text = [x.replace(' ', '').replace('_', ' ') for x in text]
