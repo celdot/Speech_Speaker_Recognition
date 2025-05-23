@@ -372,11 +372,10 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         for epoch in range(hparams['epochs']):
             train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
             print('Epoch:', epoch, 'Train Loss:', train_loss)
-            print('Epoch:', epoch, 'Validation CER:', avg_cer, 'Validation WER:', avg_wer)
-            if avg_cer < best_cer:
-                best_cer = avg_cer
+            cer, wer = test(model, device, val_loader, criterion, epoch)
             print('Epoch:', epoch, 'Validation CER:', cer, 'Validation WER:', wer)
             if cer < best_cer:
+                best_cer = cer
                 torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
 
     elif mode == 'test':
