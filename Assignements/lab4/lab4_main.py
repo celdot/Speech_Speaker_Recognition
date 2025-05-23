@@ -217,7 +217,7 @@ def train(model, device, train_loader, criterion, optimizer, epoch):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(spectrograms), data_len,
                 100. * batch_idx / len(train_loader), loss.item()))
-            
+
     return loss.item()
 
 
@@ -256,9 +256,11 @@ def test(model, device, test_loader, criterion, epoch):
     avg_wer = sum(test_wer)/len(test_wer)
     return avg_cer, avg_wer, test_loss
 
+
 """
 GRID SEARCH FOR LANGUAGE MODEL PARAMETERS
 """
+
 
 def grid_search_lm_params(model, device, val_loader, root_dir):
     print("Starting grid search over alpha and beta...")
@@ -284,7 +286,8 @@ def grid_search_lm_params(model, device, val_loader, root_dir):
             total_wer = []
             for data in val_loader:
                 spectrograms, labels, _, label_lengths = data
-                spectrograms, labels = spectrograms.to(device), labels.to(device)
+                spectrograms, labels = spectrograms.to(
+                    device), labels.to(device)
                 output = model(spectrograms)
 
                 decoded_targets = [intToStr(labels[i][:label_lengths[i]].tolist())
@@ -301,13 +304,15 @@ def grid_search_lm_params(model, device, val_loader, root_dir):
                 best_wer = avg_wer
                 best_alpha, best_beta = alpha, beta
 
-    print(f"\nBest WER: {best_wer:.4f} with alpha={best_alpha} and beta={best_beta}")
-
+    print(
+        f"\nBest WER: {best_wer:.4f} with alpha={best_alpha} and beta={best_beta}")
 
 
 """
 MAIN PROGRAM
 """
+
+
 def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_search=False):
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(7)
@@ -315,7 +320,7 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     print('Using device:', device)
 
     print("don't download train")
-    #train_dataset = torchaudio.datasets.LIBRISPEECH(
+    # train_dataset = torchaudio.datasets.LIBRISPEECH(
     #    root_dir, url='train-clean-100', download=True)
     val_dataset = torchaudio.datasets.LIBRISPEECH(
         root_dir, url='dev-clean', download=True)
@@ -331,18 +336,18 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     #                                 **kwargs)
 
     val_loader = data.DataLoader(dataset=val_dataset,
-                                    batch_size=hparams['batch_size'],
-                                    shuffle=True,
-                                    collate_fn=lambda x: dataProcessing(
-                                        x, test_audio_transform),
-                                    **kwargs)
+                                 batch_size=hparams['batch_size'],
+                                 shuffle=True,
+                                 collate_fn=lambda x: dataProcessing(
+                                     x, test_audio_transform),
+                                 **kwargs)
 
     test_loader = data.DataLoader(dataset=test_dataset,
-                                    batch_size=hparams['batch_size'],
-                                    shuffle=False,
-                                    collate_fn=lambda x: dataProcessing(
-                                        x, test_audio_transform),
-                                    **kwargs)
+                                  batch_size=hparams['batch_size'],
+                                  shuffle=False,
+                                  collate_fn=lambda x: dataProcessing(
+                                      x, test_audio_transform),
+                                  **kwargs)
 
     model = SpeechRecognitionModel(
         hparams['n_cnn_layers'],
@@ -369,27 +374,29 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
 
     if mode == 'train':
         best_cer = float("inf")
-        for epoch in range(hparams['epochs']):
-            train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
-            print('Epoch:', epoch, 'Train Loss:', train_loss)
-            cer, wer = test(model, device, val_loader, criterion, epoch)
-            print('Epoch:', epoch, 'Validation CER:', cer, 'Validation WER:', wer)
-            if cer < best_cer:
-                best_cer = cer
-                torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
+        # for epoch in range(hparams['epochs']):
+        #     train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
+        #     print('Epoch:', epoch, 'Train Loss:', train_loss)
+        #     cer, wer = test(model, device, val_loader, criterion, epoch)
+        #     print('Epoch:', epoch, 'Validation CER:', cer, 'Validation WER:', wer)
+        #     if cer < best_cer:
+        #         best_cer = cer
+        #         torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
 
     elif mode == 'test':
-        avg_cer, avg_wer, test_loss = test(model, device, test_loader, criterion, -1)
+        avg_cer, avg_wer, test_loss = test(
+            model, device, test_loader, criterion, -1)
         print('Test set: Average loss: {:.4f}, Average CER: {:4f} Average WER: {:.4f}\n'.format(
-        test_loss, avg_cer, avg_wer))
-        
+            test_loss, avg_cer, avg_wer))
+
     if use_language_model:
         # Path to your ARPA language model
-        kenlm_model_path = os.path.join(root_dir, "wiki-interpolate.3gram.arpa")
+        kenlm_model_path = os.path.join(
+            root_dir, "wiki-interpolate.3gram.arpa")
         decoder_labels = [
-                " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
-                "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-            ]
+            " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
+            "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+        ]
 
         decoder = build_ctcdecoder(
             decoder_labels,
@@ -397,7 +404,7 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
             alpha=0.5,  # LM weight
             beta=1.0    # Word insertion bonus
         )
-        
+
     if grid_search:
         grid_search_lm_params(model, device, val_loader, root_dir)
 
@@ -413,7 +420,8 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
                 text = greedyDecoder(output)
             print('wavfile:', wavfile)
             print('text:', text)
-            
+
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--mode', help='train, test or recognize')
@@ -421,19 +429,18 @@ if __name__ == '__main__':
                            help='model to load', default='')
     argparser.add_argument('wavfiles', nargs='*', help='wavfiles to recognize')
     argparser.add_argument('--use_language_model', action='store_true',
-                        help='use language model for decoding')
+                           help='use language model for decoding')
     argparser.add_argument('--grid_search', action='store_true',
-                        help='perform grid search on alpha/beta for language model')
+                           help='perform grid search on alpha/beta for language model')
 
     args = argparser.parse_args()
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-    # print cuda device 
+    # print cuda device
     if torch.cuda.is_available():
         print('Using GPU:', torch.cuda.get_device_name(0))
     else:
         print('Using CPU')
     print('ROOT_DIR:', ROOT_DIR)
-    
-    main(ROOT_DIR, args.mode, args.model, args.wavfiles, args.use_language_model, args.grid_search)
 
-
+    main(ROOT_DIR, args.mode, args.model, args.wavfiles,
+         args.use_language_model, args.grid_search)
