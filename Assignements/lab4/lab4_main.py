@@ -30,13 +30,8 @@ hparams = {
     "stride": 2,
     "dropout": 0.1,
     "learning_rate": 5e-4,
-<<<<<<< Updated upstream
     "batch_size": 16,
     "epochs": 3
-=======
-    "batch_size": 20,
-    "epochs": 20
->>>>>>> Stashed changes
 }
 
 
@@ -205,11 +200,7 @@ TRAINING AND TESTING
 def train(model, device, train_loader, criterion, optimizer, epoch):
     model.train()
     data_len = len(train_loader.dataset)
-<<<<<<< Updated upstream
-    for batch_idx, _data in tqdm(enumerate(train_loader)):
-=======
     for batch_idx, _data in tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
->>>>>>> Stashed changes
         spectrograms, labels, input_lengths, label_lengths = _data
         spectrograms, labels = spectrograms.to(device), labels.to(device)
 
@@ -221,10 +212,10 @@ def train(model, device, train_loader, criterion, optimizer, epoch):
                          input_lengths, label_lengths)
         loss.backward()
         optimizer.step()
-        # if epoch == 0 and (batch_idx % 100 == 0 or batch_idx == data_len):
-        #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-        #         epoch, batch_idx * len(spectrograms), data_len,
-        #         100. * batch_idx / len(train_loader), loss.item()))
+        if epoch == 0 and (batch_idx % 100 == 0 or batch_idx == data_len):
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                epoch, batch_idx * len(spectrograms), data_len,
+                100. * batch_idx / len(train_loader), loss.item()))
             
     return loss.item()
 
@@ -262,9 +253,7 @@ def test(model, device, test_loader, criterion, epoch):
 
     avg_cer = sum(test_cer)/len(test_cer)
     avg_wer = sum(test_wer)/len(test_wer)
-    print('Test set: Average loss: {:.4f}, Average CER: {:4f} Average WER: {:.4f}\n'.format(
-        test_loss, avg_cer, avg_wer))
-    return avg_cer, avg_wer
+    return avg_cer, avg_wer, test_loss
 
 """
 GRID SEARCH FOR LANGUAGE MODEL PARAMETERS
@@ -325,11 +314,11 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     print('Using device:', device)
 
     train_dataset = torchaudio.datasets.LIBRISPEECH(
-        ".", url='train-clean-100', download=True)
+        root_dir, url='train-clean-100', download=True)
     val_dataset = torchaudio.datasets.LIBRISPEECH(
-        ".", url='dev-clean', download=True)
+        root_dir, url='dev-clean', download=True)
     test_dataset = torchaudio.datasets.LIBRISPEECH(
-        ".", url='test-clean', download=True)
+        root_dir, url='test-clean', download=True)
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
     train_loader = data.DataLoader(dataset=train_dataset,
@@ -380,21 +369,16 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
         for epoch in range(hparams['epochs']):
             train_loss = train(model, device, train_loader, criterion, optimizer, epoch)
             print('Epoch:', epoch, 'Train Loss:', train_loss)
-<<<<<<< Updated upstream
-            # cer, _ = test(model, device, val_loader, criterion, epoch)
-            # if cer < best_cer:
-            #     best_cer = cer
-            #     torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
-=======
-            cer, wer = test(model, device, val_loader, criterion, epoch)
-            print('Epoch:', epoch, 'Validation CER:', cer, 'Validation WER:', wer)
-            if cer < best_cer:
-                best_cer = cer
+            avg_cer, avg_wer, _= test(model, device, val_loader, criterion, epoch)
+            print('Epoch:', epoch, 'Validation CER:', avg_cer, 'Validation WER:', avg_wer)
+            if avg_cer < best_cer:
+                best_cer = avg_cer
                 torch.save(model.state_dict(), os.path.join(root_dir, 'best_model.pth'))
->>>>>>> Stashed changes
 
     elif mode == 'test':
-        test(model, device, test_loader, criterion, -1)
+        avg_cer, avg_wer, test_loss = test(model, device, test_loader, criterion, -1)
+        print('Test set: Average loss: {:.4f}, Average CER: {:4f} Average WER: {:.4f}\n'.format(
+        test_loss, avg_cer, avg_wer))
         
     if use_language_model:
         # Path to your ARPA language model
