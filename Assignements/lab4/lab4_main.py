@@ -4,6 +4,7 @@ import argparse
 import itertools
 import os
 
+import kenlm
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -313,20 +314,21 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     device = torch.device("cuda" if use_cuda else "cpu")
     print('Using device:', device)
 
-    train_dataset = torchaudio.datasets.LIBRISPEECH(
-        root_dir, url='train-clean-100', download=True)
+    print("don't download train")
+    #train_dataset = torchaudio.datasets.LIBRISPEECH(
+    #    root_dir, url='train-clean-100', download=True)
     val_dataset = torchaudio.datasets.LIBRISPEECH(
         root_dir, url='dev-clean', download=True)
     test_dataset = torchaudio.datasets.LIBRISPEECH(
         root_dir, url='test-clean', download=True)
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-    train_loader = data.DataLoader(dataset=train_dataset,
-                                    batch_size=hparams['batch_size'],
-                                    shuffle=True,
-                                    collate_fn=lambda x: dataProcessing(
-                                        x, train_audio_transform),
-                                    **kwargs)
+    # train_loader = data.DataLoader(dataset=train_dataset,
+    #                                 batch_size=hparams['batch_size'],
+    #                                 shuffle=True,
+    #                                 collate_fn=lambda x: dataProcessing(
+    #                                    x, train_audio_transform),
+    #                                 **kwargs)
 
     val_loader = data.DataLoader(dataset=val_dataset,
                                     batch_size=hparams['batch_size'],
@@ -362,7 +364,8 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     print(mode)
 
     if model_load != '':
-        model.load_state_dict(torch.load(model))
+        print(model_load)
+        model.load_state_dict((torch.load(model_load, weights_only=True)))
 
     if mode == 'train':
         best_cer = float("inf")

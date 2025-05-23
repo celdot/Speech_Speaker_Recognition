@@ -1,0 +1,9 @@
+### Greedy algorithm
+
+wavfile: /content/drive/MyDrive/lab4/LibriSpeech/test-clean/3729/6852/3729-6852-0004.flac
+text: ['h e r _ f a c e _ w a s _ i n _ a n e c t m a g h f w a r d _ i n s p i r e d _ e v e r y o n e _ w i t h _ t h e _ a r m e s t _ s e m p a t y _ a n d _ y e t _ i f _ y o u _ e x a m i t i t _ a t t e n t e d l y _ t h e r e _ w a s _ n o t _ o n e _ f e a u t i f u l _ f e t u r e _ s h e _ d o u d _ n o t _ b e c a l l e _ h a n d s o m _ b u t _ n o _ o n e _ c o u l d _ a v e _ t h o u g h t _ h e r _ h i l y']
+wavfile: /content/drive/MyDrive/lab4/LibriSpeech/test-clean/8224/274384/8224-274384-0013.flac
+text: ['h i s _ d e t _ i n _ t i s c o n j o l t u r e _ w a s _ a p u b l i c _ m i s f o r t u n e']
+wavfile: /content/drive/MyDrive/lab4/LibriSpeech/test-clean/6930/75918/6930-75918-0019.flac
+text: ['_ a p o n _ t h e _ l a r _ s q u a r e _ i n _ f i n t _ o e _ t h e _ h o _ h o w _ t h e _ s h a d o e s _ o f _ t e t e n t s _ i n e s e c t e d _ b y _ t h e _ g o l d _ i n _ m o n _ d e m g s _ f o r m e d _ a s _ i t _ w o r e _ a _ h u g e _ m o a t e _ o _ j e c t _ i n _ e l l o w _ f l a g _ s t o n s']
+
