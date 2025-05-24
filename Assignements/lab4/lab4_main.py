@@ -286,7 +286,9 @@ def grid_search_lm_params(model, device, val_loader, root_dir, decoder_labels):
             )
 
             total_wer = []
-            for data in tqdm(val_loader, desc=f"Testing ({i} / {len(alphas)*len(betas)})", total=len(val_loader)):
+            bar = tqdm(
+                desc=f"Testing ({i} / {len(alphas)*len(betas)})", total=len(val_loader))
+            for data in val_loader:
                 spectrograms, labels, _, label_lengths = data
                 spectrograms, labels = spectrograms.to(
                     device), labels.to(device)
@@ -297,7 +299,15 @@ def grid_search_lm_params(model, device, val_loader, root_dir, decoder_labels):
 
                 for i in range(len(spectrograms)):
                     pred = decoder.decode(output[i].cpu().detach().numpy())
-                    total_wer.append(wer(decoded_targets[i], pred))
+                    err = wer(
+                        decoded_targets[i].replace(' ', ''),
+                        pred,
+                        delimiter='_'
+                    )
+                    total_wer.append(err)
+                    bar.set_postfix_str(
+                        f"alpha={alpha}, beta={beta}, WER={err:.4f}")
+                bar.update(1)
 
             avg_wer = sum(total_wer) / len(total_wer)
             print(f"alpha={alpha}, beta={beta}, WER={avg_wer:.4f}")
@@ -336,21 +346,12 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
 
     val_dataset = torchaudio.datasets.LIBRISPEECH(
         root_dir, url='dev-clean', download=True)
-    test_dataset = torchaudio.datasets.LIBRISPEECH(
-        root_dir, url='test-clean', download=True)
     val_loader = data.DataLoader(dataset=val_dataset,
                                  batch_size=hparams['batch_size'],
                                  shuffle=True,
                                  collate_fn=lambda x: dataProcessing(
                                      x, test_audio_transform),
                                  **kwargs)
-
-    test_loader = data.DataLoader(dataset=test_dataset,
-                                  batch_size=hparams['batch_size'],
-                                  shuffle=False,
-                                  collate_fn=lambda x: dataProcessing(
-                                      x, test_audio_transform),
-                                  **kwargs)
 
     model = SpeechRecognitionModel(
         hparams['n_cnn_layers'],
@@ -390,6 +391,14 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
                     root_dir, 'best_model.pth'))
 
     elif mode == 'test':
+        test_dataset = torchaudio.datasets.LIBRISPEECH(
+            root_dir, url='test-clean', download=True)
+        test_loader = data.DataLoader(dataset=test_dataset,
+                                      batch_size=hparams['batch_size'],
+                                      shuffle=False,
+                                      collate_fn=lambda x: dataProcessing(
+                                          x, test_audio_transform),
+                                      **kwargs)
         avg_cer, avg_wer, test_loss = test(
             model, device, test_loader, criterion, -1)
         print('Test set: Average loss: {:.4f}, Average CER: {:4f} Average WER: {:.4f}\n'.format(

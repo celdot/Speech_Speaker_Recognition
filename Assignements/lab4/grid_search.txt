@@ -1,0 +1,20 @@
+alpha=1.0, beta=2.0, WER=0.5351
+Space token ' ' missing from vocabulary.
+Unigrams and labels don't seem to agree.
+Testing (11 / 16): 100%|██████████| 91/91 [16:41<00:00, 11.00s/it, alpha=1.0, beta=2.0, WER=0.5000]
+Testing (12 / 16): 100%|██████████| 91/91 [16:52<00:00,  8.15s/it, alpha=1.5, beta=0.5, WER=0.4545]Space token ' ' missing from vocabulary.
+Unigrams and labels don't seem to agree.
+alpha=1.5, beta=0.5, WER=0.5352
+Testing (12 / 16): 100%|██████████| 91/91 [16:53<00:00, 11.14s/it, alpha=1.5, beta=0.5, WER=0.4545]
+Space token ' ' missing from vocabulary.
+Unigrams and labels don't seem to agree.
+alpha=1.5, beta=1.0, WER=0.5334
+Testing (13 / 16): 100%|██████████| 91/91 [17:07<00:00, 11.29s/it, alpha=1.5, beta=1.0, WER=0.4000]
+Testing (14 / 16): 100%|██████████| 91/91 [16:51<00:00,  8.73s/it, alpha=1.5, beta=1.5, WER=0.3529]Space token ' ' missing from vocabulary.
+Unigrams and labels don't seem to agree.
+alpha=1.5, beta=1.5, WER=0.5346
+Testing (14 / 16): 100%|██████████| 91/91 [17:12<00:00, 11.35s/it, alpha=1.5, beta=1.5, WER=0.3529]
+Testing (15 / 16): 100%|██████████| 91/91 [16:44<00:00, 11.04s/it, alpha=1.5, beta=2.0, WER=0.0000]
+alpha=1.5, beta=2.0, WER=0.5340
+
+Best WER: 0.5334 with alpha=1.5 and beta=1.0
