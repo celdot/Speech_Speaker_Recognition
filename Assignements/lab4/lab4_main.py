@@ -221,7 +221,7 @@ def train(model, device, train_loader, criterion, optimizer, epoch):
     return loss.item()
 
 
-def test(model, device, test_loader, criterion, epoch):
+def test(model, device, test_loader, criterion, decoder=None):
     print('\nevaluating…')
     model.eval()
     test_loss = 0
@@ -245,7 +245,15 @@ def test(model, device, test_loader, criterion, epoch):
                     intToStr(labels[i][:label_lengths[i]].tolist()))
 
             # get predicted text
-            decoded_preds = greedyDecoder(output)
+            if decoder is not None:
+                decoded_preds = []
+                for i in range(len(spectrograms)):
+                    pred = decoder.decode(output[i].cpu().detach().numpy())
+                    decoded_preds.append(pred.replace('_', ' '))
+            else:
+                decoded_preds = greedyDecoder(output)
+                decoded_preds = [x.replace(' ', '').replace(
+                    '_', ' ') for x in decoded_preds]
 
             # calculate accuracy
             for j in range(len(decoded_preds)):
@@ -325,7 +333,7 @@ MAIN PROGRAM
 """
 
 
-def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_search=False):
+def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_search=False, alpha=1.5, beta=1.0):
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(7)
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -364,6 +372,7 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
     ).to(device)
 
     print(mode)
+    criterion = nn.CTCLoss(blank=28).to(device)
 
     if model_load != '':
         print(model_load)
@@ -375,14 +384,13 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
             [param.nelement() for param in model.parameters()]))
 
         optimizer = optim.AdamW(model.parameters(), hparams['learning_rate'])
-        criterion = nn.CTCLoss(blank=28).to(device)
 
         best_cer = float("inf")
         for epoch in range(hparams['epochs']):
             train_loss = train(model, device, train_loader,
                                criterion, optimizer, epoch)
             print('Epoch:', epoch, 'Train Loss:', train_loss)
-            cer, wer = test(model, device, val_loader, criterion, epoch)
+            cer, wer = test(model, device, val_loader, criterion)
             print('Epoch:', epoch, 'Validation CER:',
                   cer, 'Validation WER:', wer)
             if cer < best_cer:
@@ -390,7 +398,24 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
                 torch.save(model.state_dict(), os.path.join(
                     root_dir, 'best_model.pth'))
 
-    elif mode == 'test':
+    decoder_labels = intToStr(
+        list(range(0, hparams['n_class']-1))).split() + [""]  # 0-27
+    print('decoder_labels:', decoder_labels)
+    if use_language_model:
+        # Path to your ARPA language model
+        kenlm_model_path = os.path.join(
+            root_dir, "wiki-interpolate.3gram.arpa")
+
+        decoder = build_ctcdecoder(
+            decoder_labels,
+            kenlm_model_path=kenlm_model_path,
+            alpha=alpha,  # LM weight
+            beta=beta    # Word insertion bonus
+        )
+    else:
+        decoder = None
+
+    if mode == 'test':
         test_dataset = torchaudio.datasets.LIBRISPEECH(
             root_dir, url='test-clean', download=True)
         test_loader = data.DataLoader(dataset=test_dataset,
@@ -400,25 +425,10 @@ def main(root_dir, mode, model_load, wavfiles, use_language_model=False, grid_se
                                           x, test_audio_transform),
                                       **kwargs)
         avg_cer, avg_wer, test_loss = test(
-            model, device, test_loader, criterion, -1)
+            model, device, test_loader, criterion, decoder)
         print('Test set: Average loss: {:.4f}, Average CER: {:4f} Average WER: {:.4f}\n'.format(
             test_loss, avg_cer, avg_wer))
 
-    decoder_labels = intToStr(
-        list(range(0, hparams['n_class']-1))).split() + [""]  # 0-27
-    print('decoder_labels:', decoder_labels)
-
-    if use_language_model:
-        # Path to your ARPA language model
-        kenlm_model_path = os.path.join(
-            root_dir, "wiki-interpolate.3gram.arpa")
-
-        decoder = build_ctcdecoder(
-            decoder_labels,
-            kenlm_model_path=kenlm_model_path,
-            alpha=0.5,  # LM weight
-            beta=1.0    # Word insertion bonus
-        )
 
     if grid_search:
         grid_search_lm_params(model, device, val_loader,
